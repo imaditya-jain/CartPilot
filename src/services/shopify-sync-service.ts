@@ -9,6 +9,7 @@ import { requireOwnedStore } from "@/services/store-service";
 import { scheduleStoreKnowledgeRebuild } from "@/services/chatbot-knowledge-service";
 import { migrateLegacyOfflineToken, refreshShopifyOfflineToken } from "@/services/shopify-token-service";
 import type { ShopifyOfflineToken } from "@/services/shopify-oauth-service";
+import { ApiError } from "@/lib/utils/api-response";
 
 const PAGE_SIZE = 50;
 const TOKEN_REFRESH_BUFFER_MS = 2 * 60 * 1000;
@@ -243,7 +244,7 @@ export async function syncProducts(storeId: string, client: AdminClient, tenantI
 
 const ORDERS_QUERY = `
   query OrdersSync($cursor: String) {
-    orders(first: ${PAGE_SIZE}, after: $cursor, sortKey: CREATED_AT) {
+    orders(first: ${PAGE_SIZE}, after: $cursor, sortKey: CREATED_AT, reverse: true) {
       edges {
         cursor
         node {
@@ -274,6 +275,12 @@ const ORDERS_QUERY = `
       }
       pageInfo { hasNextPage }
     }
+  }
+`;
+
+const ORDERS_COUNT_QUERY = `
+  query OrdersCount {
+    ordersCount(limit: 10000) { count }
   }
 `;
 
@@ -311,9 +318,14 @@ interface OrdersQueryResult {
   };
 }
 
+interface OrdersCountQueryResult {
+  ordersCount: { count: number };
+}
+
 export async function syncOrders(storeId: string, client: AdminClient, tenantId: string): Promise<number> {
   const storeObjectId = new Types.ObjectId(storeId);
   const tenantObjectId = new Types.ObjectId(tenantId);
+  const { ordersCount } = await client.request<OrdersCountQueryResult>(ORDERS_COUNT_QUERY);
   let cursor: string | null = null;
   let hasNextPage = true;
   let total = 0;
@@ -365,6 +377,14 @@ export async function syncOrders(storeId: string, client: AdminClient, tenantId:
     cursor = data.orders.edges.at(-1)?.cursor ?? null;
   }
 
+  if (ordersCount.count > 0 && total === 0) {
+    throw new ApiError(
+      502,
+      "SHOPIFY_ORDERS_NOT_ACCESSIBLE",
+      `Shopify reports ${ordersCount.count} orders, but returned none to sync. Confirm the app has read_orders access. Shopify only exposes the last 60 days by default; older orders require Shopify approval for read_all_orders, followed by updating the app scopes and reconnecting the store.`
+    );
+  }
+
   return total;
 }
 
@@ -408,6 +428,9 @@ export async function runStoreSync(storeId: string, tenantId: string): Promise<v
       { _id: storeId },
       { $set: { syncStatus: "error", syncStartedAt: null, lastSyncError: message } }
     );
+    throw error instanceof ApiError
+      ? error
+      : new ApiError(502, "SHOPIFY_SYNC_FAILED", message);
   }
 }
 
