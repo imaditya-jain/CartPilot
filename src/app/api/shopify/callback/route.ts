@@ -3,7 +3,7 @@ import { getAuthContext } from "@/lib/auth/get-auth-context";
 import { shopDomainSchema } from "@/lib/validation/shopify";
 import { verifyOAuthHmac } from "@/lib/shopify/hmac";
 import { verifyAndConsumeOAuthState } from "@/lib/shopify/oauth-state";
-import { exchangeCodeForAccessToken, fetchShopInfo } from "@/services/shopify-oauth-service";
+import { exchangeCodeForAccessToken } from "@/services/shopify-oauth-service";
 import { finalizeStoreConnection } from "@/services/shopify-connection-service";
 
 export const dynamic = "force-dynamic";
@@ -56,14 +56,16 @@ export async function GET(request: NextRequest) {
 
   try {
     const { accessToken, scopes } = await exchangeCodeForAccessToken(shop, code);
-    const shopInfo = await fetchShopInfo(shop, accessToken);
 
     await finalizeStoreConnection({
       tenantId: auth.userId,
       shopDomain: shop,
       accessToken,
-      shopifyShopId: shopInfo.id,
-      shopName: shopInfo.name,
+      // Persist the successful OAuth grant before making any Admin API requests. The shop
+      // metadata query is unnecessary for connecting and can reject a valid token; sync and
+      // webhook registration exercise the scopes the app actually needs afterward.
+      shopifyShopId: null,
+      shopName: null,
       scopes,
     });
 

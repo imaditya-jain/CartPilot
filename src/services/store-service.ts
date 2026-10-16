@@ -50,8 +50,8 @@ export async function findConnectedStoresByDomain(shopDomain: string) {
 interface UpsertConnectedStoreInput {
   tenantId: string;
   shopDomain: string;
-  shopifyShopId: string;
-  shopName: string;
+  shopifyShopId: string | null;
+  shopName: string | null;
   encryptedAccessToken: string;
   scopes: string[];
 }

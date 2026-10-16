@@ -8,8 +8,8 @@ interface FinalizeConnectionInput {
   tenantId: string;
   shopDomain: string;
   accessToken: string;
-  shopifyShopId: string;
-  shopName: string;
+  shopifyShopId: string | null;
+  shopName: string | null;
   scopes: string[];
 }
 
