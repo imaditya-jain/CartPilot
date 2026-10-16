@@ -273,7 +273,7 @@ const ORDERS_QUERY = `
           }
         }
       }
-      pageInfo { hasNextPage }
+      pageInfo { hasNextPage endCursor }
     }
   }
 `;
@@ -314,7 +314,7 @@ interface OrdersQueryResult {
         };
       };
     }>;
-    pageInfo: { hasNextPage: boolean };
+    pageInfo: { hasNextPage: boolean; endCursor: string | null };
   };
 }
 
@@ -373,8 +373,11 @@ export async function syncOrders(storeId: string, client: AdminClient, tenantId:
       total += ops.length;
     }
 
-    hasNextPage = data.orders.edges.length === PAGE_SIZE && data.orders.pageInfo.hasNextPage;
-    cursor = data.orders.edges.at(-1)?.cursor ?? null;
+    hasNextPage = data.orders.pageInfo.hasNextPage;
+    cursor = data.orders.pageInfo.endCursor;
+    if (hasNextPage && !cursor) {
+      throw new Error("Shopify indicated more orders are available but did not return a pagination cursor.");
+    }
   }
 
   if (ordersCount.count > 0 && total === 0) {
