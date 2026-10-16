@@ -54,7 +54,29 @@ export function createAdminClient(shopDomain: string, accessToken: string) {
       }
 
       if (!response.ok) {
-        throw new ShopifyApiError(response.status, `Shopify API request failed (${response.status}).`);
+        const responseText = await response.text().catch(() => "");
+        let detail = "";
+        try {
+          const errorBody = JSON.parse(responseText) as { errors?: unknown };
+          if (typeof errorBody.errors === "string") {
+            detail = errorBody.errors;
+          } else if (Array.isArray(errorBody.errors)) {
+            detail = errorBody.errors
+              .map((item) => (item && typeof item === "object" && "message" in item ? String(item.message) : ""))
+              .filter(Boolean)
+              .join("; ");
+          }
+        } catch {
+          // Keep the response detail empty if Shopify didn't return JSON.
+        }
+        const requestId = response.headers.get("x-request-id");
+        const diagnostic = [detail.slice(0, 400), requestId ? `request id ${requestId}` : ""]
+          .filter(Boolean)
+          .join("; ");
+        throw new ShopifyApiError(
+          response.status,
+          `Shopify API request failed (${response.status})${diagnostic ? `: ${diagnostic}` : "."}`
+        );
       }
 
       const body = (await response.json()) as GraphQLResponse<T>;
