@@ -8,7 +8,7 @@ export function buildAuthorizeUrl(shopDomain: string, state: string): string {
     throw new ApiError(503, "SHOPIFY_NOT_CONFIGURED", "Shopify integration is not configured on this server.");
   }
 
-  const redirectUri = `${env.SHOPIFY_APP_URL}/api/shopify/callback`;
+  const redirectUri = new URL("/api/shopify/callback", env.SHOPIFY_APP_URL).toString();
   const params = new URLSearchParams({
     client_id: env.SHOPIFY_API_KEY,
     scope: env.SHOPIFY_SCOPES,

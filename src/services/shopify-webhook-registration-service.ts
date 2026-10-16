@@ -42,7 +42,7 @@ export async function registerStoreWebhooks(
   accessToken: string
 ): Promise<{ topic: string; ok: boolean; error?: string }[]> {
   const env = getServerEnv();
-  const callbackUrl = `${env.SHOPIFY_APP_URL}/api/shopify/webhooks`;
+  const callbackUrl = new URL("/api/shopify/webhooks", env.SHOPIFY_APP_URL).toString();
   const client: AdminClient = createAdminClient(shopDomain, accessToken);
 
   const results: { topic: string; ok: boolean; error?: string }[] = [];
