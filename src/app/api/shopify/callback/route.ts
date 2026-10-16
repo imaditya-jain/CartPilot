@@ -55,18 +55,20 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { accessToken, scopes } = await exchangeCodeForAccessToken(shop, code);
+    const offlineToken = await exchangeCodeForAccessToken(shop, code);
 
     await finalizeStoreConnection({
       tenantId: auth.userId,
       shopDomain: shop,
-      accessToken,
+      accessToken: offlineToken.accessToken,
       // Persist the successful OAuth grant before making any Admin API requests. The shop
       // metadata query is unnecessary for connecting and can reject a valid token; sync and
       // webhook registration exercise the scopes the app actually needs afterward.
       shopifyShopId: null,
       shopName: null,
-      scopes,
+      scopes: offlineToken.scopes,
+      offlineToken,
+      tokenType: "oauth_offline",
     });
 
     return redirectToStores(request, "connected");

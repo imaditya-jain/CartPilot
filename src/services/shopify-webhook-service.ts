@@ -135,6 +135,14 @@ export async function handleAppUninstalledWebhook(shopDomain: string): Promise<v
   await connectToDatabase();
   await Store.updateMany(
     { shopDomain },
-    { $set: { connectionStatus: "disconnected", encryptedAccessToken: null } }
+    {
+      $set: {
+        connectionStatus: "disconnected",
+        encryptedAccessToken: null,
+        encryptedRefreshToken: null,
+        accessTokenExpiresAt: null,
+        refreshTokenExpiresAt: null,
+      },
+    }
   );
 }

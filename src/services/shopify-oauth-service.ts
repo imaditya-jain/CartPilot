@@ -19,16 +19,26 @@ export function buildAuthorizeUrl(shopDomain: string, state: string): string {
   return `https://${shopDomain}/admin/oauth/authorize?${params.toString()}`;
 }
 
+export interface ShopifyOfflineToken {
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresAt: Date;
+  refreshTokenExpiresAt: Date;
+}
+
 interface AccessTokenResponse {
   access_token: string;
   scope: string;
+  expires_in?: number;
+  refresh_token?: string;
+  refresh_token_expires_in?: number;
 }
 
-/** Exchanges a one-time OAuth authorization code for a permanent (offline) access token. */
+/** Exchanges an OAuth authorization code for a refreshable expiring offline token pair. */
 export async function exchangeCodeForAccessToken(
   shopDomain: string,
   code: string
-): Promise<{ accessToken: string; scopes: string[] }> {
+): Promise<ShopifyOfflineToken & { scopes: string[] }> {
   const env = getServerEnv();
   if (!env.SHOPIFY_API_KEY || !env.SHOPIFY_API_SECRET) {
     throw new ApiError(503, "SHOPIFY_NOT_CONFIGURED", "Shopify integration is not configured on this server.");
@@ -36,20 +46,35 @@ export async function exchangeCodeForAccessToken(
 
   const response = await fetch(`https://${shopDomain}/admin/oauth/access_token`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
       client_id: env.SHOPIFY_API_KEY,
       client_secret: env.SHOPIFY_API_SECRET,
       code,
+      expiring: "1",
     }),
   });
 
   if (!response.ok) {
-    throw new ApiError(502, "SHOPIFY_TOKEN_EXCHANGE_FAILED", "Failed to complete Shopify authorization.");
+    const body = await response.json().catch(() => ({})) as { error_description?: string; error?: string };
+    throw new ApiError(
+      502,
+      "SHOPIFY_TOKEN_EXCHANGE_FAILED",
+      body.error_description ?? body.error ?? "Failed to complete Shopify authorization."
+    );
   }
 
   const body = (await response.json()) as AccessTokenResponse;
-  return { accessToken: body.access_token, scopes: body.scope.split(",").map((s) => s.trim()) };
+  if (!body.access_token || !body.refresh_token || !body.expires_in || !body.refresh_token_expires_in) {
+    throw new ApiError(502, "SHOPIFY_EXPIRING_TOKEN_MISSING", "Shopify did not return expiring offline token credentials.");
+  }
+  return {
+    accessToken: body.access_token,
+    refreshToken: body.refresh_token,
+    accessTokenExpiresAt: new Date(Date.now() + body.expires_in * 1000),
+    refreshTokenExpiresAt: new Date(Date.now() + body.refresh_token_expires_in * 1000),
+    scopes: body.scope.split(",").map((s) => s.trim()),
+  };
 }
 
 interface ShopInfoResponse {

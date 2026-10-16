@@ -4,19 +4,108 @@ import { Store, type StoreDocument } from "@/models/Store";
 import { Product } from "@/models/Product";
 import { Order } from "@/models/Order";
 import { createAdminClient, type AdminClient } from "@/lib/shopify/admin-client";
-import { decryptSecret } from "@/lib/shopify/crypto";
+import { decryptSecret, encryptSecret } from "@/lib/shopify/crypto";
 import { requireOwnedStore } from "@/services/store-service";
 import { scheduleStoreKnowledgeRebuild } from "@/services/chatbot-knowledge-service";
+import { migrateLegacyOfflineToken, refreshShopifyOfflineToken } from "@/services/shopify-token-service";
+import type { ShopifyOfflineToken } from "@/services/shopify-oauth-service";
 
 const PAGE_SIZE = 50;
+const TOKEN_REFRESH_BUFFER_MS = 2 * 60 * 1000;
+const pendingTokenRefreshes = new Map<string, Promise<string>>();
+
+async function refreshOrMigrateStoreToken(storeId: string, shopDomain: string, accessToken: string): Promise<string> {
+  const pending = pendingTokenRefreshes.get(storeId);
+  if (pending) return pending;
+
+  const refresh = (async () => {
+    const store = await Store.findById(storeId).select("+encryptedAccessToken +encryptedRefreshToken");
+    if (!store?.encryptedAccessToken) throw new Error("Store is not connected.");
+
+    // Another request may have refreshed the token while this request was waiting for the lock.
+    if (
+      store.encryptedRefreshToken &&
+      store.accessTokenExpiresAt &&
+      store.accessTokenExpiresAt.getTime() > Date.now() + TOKEN_REFRESH_BUFFER_MS
+    ) {
+      return decryptSecret(store.encryptedAccessToken);
+    }
+
+    let tokenPair: ShopifyOfflineToken;
+    if (store.encryptedRefreshToken) {
+      if (store.refreshTokenExpiresAt && store.refreshTokenExpiresAt.getTime() <= Date.now()) {
+        throw new Error("Shopify refresh token expired. Reconnect this store to restore access.");
+      }
+      const refreshToken = await decryptSecret(store.encryptedRefreshToken);
+      tokenPair = await refreshShopifyOfflineToken(shopDomain, refreshToken);
+    } else if (store.tokenType === "custom") {
+      return accessToken;
+    } else {
+      // Existing installations may still have a permanent offline token. Shopify provides a
+      // token-exchange migration that converts it without requiring the merchant to reinstall.
+      tokenPair = await migrateLegacyOfflineToken(shopDomain, await decryptSecret(store.encryptedAccessToken));
+    }
+
+    const [encryptedAccessToken, encryptedRefreshToken] = await Promise.all([
+      encryptSecret(tokenPair.accessToken),
+      encryptSecret(tokenPair.refreshToken),
+    ]);
+    await Store.updateOne(
+      { _id: storeId },
+      {
+        $set: {
+          encryptedAccessToken,
+          encryptedRefreshToken,
+          accessTokenExpiresAt: tokenPair.accessTokenExpiresAt,
+          refreshTokenExpiresAt: tokenPair.refreshTokenExpiresAt,
+          tokenType: "oauth_offline",
+        },
+      }
+    );
+    return tokenPair.accessToken;
+  })();
+
+  pendingTokenRefreshes.set(storeId, refresh);
+  try {
+    return await refresh;
+  } catch (error) {
+    // A different serverless instance may have won the refresh-token rotation race and saved
+    // the replacement pair while this request's refresh was rejected. Reuse that fresh token.
+    const latestStore = await Store.findById(storeId)
+      .select("+encryptedAccessToken +encryptedRefreshToken")
+      .catch(() => null);
+    if (
+      latestStore?.encryptedAccessToken &&
+      latestStore.encryptedRefreshToken &&
+      latestStore.accessTokenExpiresAt &&
+      latestStore.accessTokenExpiresAt.getTime() > Date.now() + TOKEN_REFRESH_BUFFER_MS
+    ) {
+      return decryptSecret(latestStore.encryptedAccessToken);
+    }
+
+    const message = error instanceof Error ? error.message : "Unknown Shopify token refresh error.";
+    throw new Error(`Could not refresh Shopify access for ${shopDomain}: ${message} Reconnect the store if the problem continues.`);
+  } finally {
+    pendingTokenRefreshes.delete(storeId);
+  }
+}
 
 export async function getDecryptedAccessToken(storeId: string): Promise<{ store: StoreDocument; accessToken: string }> {
   await connectToDatabase();
-  const store = await Store.findById(storeId).select("+encryptedAccessToken");
+  const store = await Store.findById(storeId).select("+encryptedAccessToken +encryptedRefreshToken");
   if (!store || !store.encryptedAccessToken) {
     throw new Error("Store is not connected.");
   }
-  const accessToken = await decryptSecret(store.encryptedAccessToken);
+  let accessToken = await decryptSecret(store.encryptedAccessToken);
+
+  if (store.tokenType !== "custom") {
+    const accessTokenExpiresAt = store.accessTokenExpiresAt?.getTime() ?? 0;
+    const hasRefreshToken = Boolean(store.encryptedRefreshToken);
+    if (!hasRefreshToken || accessTokenExpiresAt <= Date.now() + TOKEN_REFRESH_BUFFER_MS) {
+      accessToken = await refreshOrMigrateStoreToken(storeId, store.shopDomain, accessToken);
+    }
+  }
+
   return { store, accessToken };
 }
 

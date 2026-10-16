@@ -3,6 +3,7 @@ import { upsertConnectedStore } from "@/services/store-service";
 import { registerStoreWebhooks } from "@/services/shopify-webhook-registration-service";
 import { runStoreSync } from "@/services/shopify-sync-service";
 import { Store, type StoreDocument } from "@/models/Store";
+import type { ShopifyOfflineToken } from "@/services/shopify-oauth-service";
 
 interface FinalizeConnectionInput {
   tenantId: string;
@@ -11,6 +12,8 @@ interface FinalizeConnectionInput {
   shopifyShopId: string | null;
   shopName: string | null;
   scopes: string[];
+  offlineToken?: ShopifyOfflineToken;
+  tokenType?: "oauth_offline" | "custom";
 }
 
 /**
@@ -25,6 +28,9 @@ interface FinalizeConnectionInput {
  */
 export async function finalizeStoreConnection(input: FinalizeConnectionInput): Promise<StoreDocument> {
   const encryptedAccessToken = await encryptSecret(input.accessToken);
+  const encryptedRefreshToken = input.offlineToken
+    ? await encryptSecret(input.offlineToken.refreshToken)
+    : null;
 
   const store = await upsertConnectedStore({
     tenantId: input.tenantId,
@@ -32,6 +38,10 @@ export async function finalizeStoreConnection(input: FinalizeConnectionInput): P
     shopifyShopId: input.shopifyShopId,
     shopName: input.shopName,
     encryptedAccessToken,
+    encryptedRefreshToken,
+    accessTokenExpiresAt: input.offlineToken?.accessTokenExpiresAt ?? null,
+    refreshTokenExpiresAt: input.offlineToken?.refreshTokenExpiresAt ?? null,
+    tokenType: input.tokenType ?? (input.offlineToken ? "oauth_offline" : "custom"),
     scopes: input.scopes,
   });
 

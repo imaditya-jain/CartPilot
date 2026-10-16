@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       // A custom app token's granted scopes aren't returned by this call; recorded as configured
       // rather than verified — informational only, not used for any authorization decision.
       scopes: env.SHOPIFY_SCOPES.split(",").map((s) => s.trim()),
+      tokenType: "custom",
     });
 
     return ok({ storeId: store._id.toString(), shopName: shopInfo.name });

@@ -53,6 +53,10 @@ interface UpsertConnectedStoreInput {
   shopifyShopId: string | null;
   shopName: string | null;
   encryptedAccessToken: string;
+  encryptedRefreshToken: string | null;
+  accessTokenExpiresAt: Date | null;
+  refreshTokenExpiresAt: Date | null;
+  tokenType: "oauth_offline" | "custom";
   scopes: string[];
 }
 
@@ -66,6 +70,10 @@ export async function upsertConnectedStore(input: UpsertConnectedStoreInput): Pr
         shopifyShopId: input.shopifyShopId,
         shopName: input.shopName,
         encryptedAccessToken: input.encryptedAccessToken,
+        encryptedRefreshToken: input.encryptedRefreshToken,
+        accessTokenExpiresAt: input.accessTokenExpiresAt,
+        refreshTokenExpiresAt: input.refreshTokenExpiresAt,
+        tokenType: input.tokenType,
         scopes: input.scopes,
         connectionStatus: "connected",
         lastSyncError: null,
@@ -80,6 +88,14 @@ export async function disconnectStore(storeId: string, tenantId: string): Promis
   await requireOwnedStore(storeId, tenantId);
   await Store.updateOne(
     { _id: storeId, tenantId },
-    { $set: { connectionStatus: "disconnected", encryptedAccessToken: null } }
+    {
+      $set: {
+        connectionStatus: "disconnected",
+        encryptedAccessToken: null,
+        encryptedRefreshToken: null,
+        accessTokenExpiresAt: null,
+        refreshTokenExpiresAt: null,
+      },
+    }
   );
 }

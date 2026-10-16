@@ -9,6 +9,10 @@ export interface StoreDocument extends Document {
   shopifyShopId: string | null;
   shopName: string | null;
   encryptedAccessToken: string | null;
+  encryptedRefreshToken: string | null;
+  accessTokenExpiresAt: Date | null;
+  refreshTokenExpiresAt: Date | null;
+  tokenType: "oauth_offline" | "custom" | null;
   scopes: string[];
   connectionStatus: StoreConnectionStatus;
   syncStatus: StoreSyncStatus;
@@ -28,6 +32,10 @@ const storeSchema = new Schema<StoreDocument>(
     shopifyShopId: { type: String, default: null },
     shopName: { type: String, default: null },
     encryptedAccessToken: { type: String, default: null, select: false },
+    encryptedRefreshToken: { type: String, default: null, select: false },
+    accessTokenExpiresAt: { type: Date, default: null },
+    refreshTokenExpiresAt: { type: Date, default: null },
+    tokenType: { type: String, enum: ["oauth_offline", "custom"], default: null },
     scopes: { type: [String], default: [] },
     connectionStatus: {
       type: String,
