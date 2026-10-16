@@ -22,9 +22,8 @@ export function ChatbotTestPanel({ storeId, enabled }: { storeId: string; enable
           />
         ) : (
           <div className="flex h-[200px] items-center justify-center rounded-lg border border-dashed border-border px-4 text-center text-sm text-muted">
-            Turn on &ldquo;Publish chatbot on storefront&rdquo; above and save to chat with it here —
-            this panel shows exactly what a shopper would see, so it respects the same publish
-            setting.
+            Publish the chatbot to test it here. Publishing enables the widget for shoppers who
+            have the storefront script installed.
           </div>
         )}
       </CardContent>

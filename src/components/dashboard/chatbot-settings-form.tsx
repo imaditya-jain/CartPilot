@@ -72,6 +72,10 @@ export function ChatbotSettingsForm({ storeId }: { storeId: string }) {
     }
   };
 
+  const onPublishToggle = handleSubmit(async (input) => {
+    await onSubmit({ ...input, enabled: !Boolean(config?.enabled) });
+  });
+
   if (status === "loading" || !config || !values.botName) {
     return <div className="h-64 animate-pulse rounded-lg bg-surface" />;
   }
@@ -123,19 +127,10 @@ export function ChatbotSettingsForm({ storeId }: { storeId: string }) {
                 ))}
               </Select>
             </div>
-            <Controller
-              control={control}
-              name="enabled"
-              render={({ field }) => (
-                <Switch
-                  id="enabled"
-                  checked={field.value}
-                  onChange={field.onChange}
-                  label="Publish chatbot on storefront"
-                  description="When off, the widget won't load for shoppers even if embedded."
-                />
-              )}
-            />
+            <p className="text-sm text-muted">
+              Publish the chatbot here, then add the storefront script from the Installation section
+              to your Shopify theme. The script displays the published chatbot to shoppers.
+            </p>
           </CardContent>
         </Card>
 
@@ -362,13 +357,23 @@ export function ChatbotSettingsForm({ storeId }: { storeId: string }) {
           <Button type="submit" isLoading={saveStatus === "saving"} disabled={!isDirty && !savedMessage}>
             Save changes
           </Button>
+          <Button
+            type="button"
+            variant={config.enabled ? "secondary" : "primary"}
+            isLoading={saveStatus === "saving"}
+            onClick={() => void onPublishToggle()}
+          >
+            {config.enabled ? "Unpublish chatbot" : "Publish chatbot"}
+          </Button>
+          <Badge tone={config.enabled ? "success" : "warning"}>
+            {config.enabled ? "Published" : "Not published"}
+          </Badge>
           {savedMessage && (
             <span className="flex items-center gap-1.5 text-sm text-success">
               <Check className="h-4 w-4" aria-hidden="true" />
               Saved
             </span>
           )}
-          {!config.enabled && <Badge tone="warning">Not published</Badge>}
         </div>
 
         <ChatbotInstallCard storeId={storeId} />

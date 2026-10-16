@@ -22,7 +22,7 @@ export function useStoreSyncStatus(storeId: string | undefined, onSyncComplete?:
   const wasSyncingRef = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const isSyncing = store?.syncStatus === "syncing";
+  const isSyncing = store?.syncStatus === "syncing" || isTriggering;
 
   useEffect(() => {
     if (isSyncing && !intervalRef.current) {
@@ -56,13 +56,13 @@ export function useStoreSyncStatus(storeId: string | undefined, onSyncComplete?:
     setIsTriggering(true);
     try {
       await apiRequest("/api/shopify/sync", { method: "POST", body: { storeId } });
-      await dispatch(fetchStores());
     } catch (error) {
       setTriggerError(error instanceof ApiClientError ? error.message : "Failed to start sync.");
     } finally {
+      await dispatch(fetchStores());
       setIsTriggering(false);
     }
-  }, [storeId, dispatch]);
+  }, [storeId, dispatch, onSyncComplete]);
 
   return { store, isSyncing, isTriggering, triggerError, triggerSync };
 }

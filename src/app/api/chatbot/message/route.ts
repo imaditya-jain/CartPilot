@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     const config = await getPublicChatbotConfig(storeId);
     if (!config) {
-      return fail(404, "CHATBOT_NOT_PUBLISHED", "This store has no published chatbot.");
+      return fail(404, "CHATBOT_NOT_PUBLISHED", "Publish this store's chatbot before accepting shopper messages.");
     }
 
     await connectToDatabase();

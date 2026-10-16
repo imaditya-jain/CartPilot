@@ -56,13 +56,12 @@ Catalog · Shopify Admin GraphQL API
   AI-invented; the reply *text* is AI-narrated when a provider is configured (same NVIDIA model),
   with a deterministic templated fallback otherwise. Public embeddable widget
   (`/widget/[storeId]` in an iframe + `public/chatbot/loader.js`, postMessage-driven sizing),
-  merchant settings page (`/settings`) with live preview and an installation snippet, and a
+  merchant settings page (`/settings`) with live preview and a direct storefront script installation snippet, and a
   one-click "Test chat widget" link (`/widget-preview/[storeId]`) that loads a mock storefront
-  with the real loader script — no separate test-only code path. Not yet built: Shopify theme app
-  extension (manual script-tag embed is the current method), discount code creation/redemption.
+  with the real loader script — no separate test-only code path. Discount code creation/redemption
+  is not yet built.
 
 ### Not yet built
-- Shopify theme app extension (script-tag embed works today, extension is the planned production path)
 - Discount eligibility/redemption engine
 - Broader test coverage + Playwright e2e
 

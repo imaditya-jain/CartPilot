@@ -16,6 +16,7 @@ export interface StoreDocument extends Document {
   scopes: string[];
   connectionStatus: StoreConnectionStatus;
   syncStatus: StoreSyncStatus;
+  syncStartedAt: Date | null;
   lastSyncedAt: Date | null;
   lastSyncError: string | null;
   productCount: number;
@@ -49,6 +50,7 @@ const storeSchema = new Schema<StoreDocument>(
       required: true,
       default: "idle",
     },
+    syncStartedAt: { type: Date, default: null },
     lastSyncedAt: { type: Date, default: null },
     lastSyncError: { type: String, default: null },
     productCount: { type: Number, default: 0 },

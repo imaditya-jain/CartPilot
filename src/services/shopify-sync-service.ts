@@ -368,17 +368,15 @@ export async function syncOrders(storeId: string, client: AdminClient, tenantId:
   return total;
 }
 
-/**
- * Full product + order sync for one store. Runs in-process (fire-and-forget from the API
- * route) rather than on a job queue — acceptable for an MVP on a single always-on Node
- * instance, but won't survive a serverless function being torn down mid-sync. Swap for a real
- * queue (BullMQ, etc.) before scaling to multiple instances or a serverless deployment.
- */
+/** Full product + order sync for one store. Route handlers await this work on serverless. */
 export async function runStoreSync(storeId: string, tenantId: string): Promise<void> {
   await connectToDatabase();
   await requireOwnedStore(storeId, tenantId);
 
-  await Store.updateOne({ _id: storeId }, { $set: { syncStatus: "syncing", lastSyncError: null } });
+  await Store.updateOne(
+    { _id: storeId },
+    { $set: { syncStatus: "syncing", syncStartedAt: new Date(), lastSyncError: null } }
+  );
 
   try {
     const { store, accessToken } = await getDecryptedAccessToken(storeId);
@@ -394,6 +392,7 @@ export async function runStoreSync(storeId: string, tenantId: string): Promise<v
       {
         $set: {
           syncStatus: "idle",
+          syncStartedAt: null,
           lastSyncedAt: new Date(),
           lastSyncError: null,
           productCount,
@@ -407,7 +406,7 @@ export async function runStoreSync(storeId: string, tenantId: string): Promise<v
     console.error(`Sync failed for store ${storeId}:`, error);
     await Store.updateOne(
       { _id: storeId },
-      { $set: { syncStatus: "error", lastSyncError: message } }
+      { $set: { syncStatus: "error", syncStartedAt: null, lastSyncError: message } }
     );
   }
 }

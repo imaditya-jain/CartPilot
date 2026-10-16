@@ -32,7 +32,7 @@ export async function updateChatbotConfig(
   return config;
 }
 
-/** Used by the (future) public storefront widget endpoint — never includes tenant/internal fields. */
+/** Public storefront widget settings; never includes tenant or internal account fields. */
 export async function getPublicChatbotConfig(storeId: string) {
   await connectToDatabase();
   const config = await ChatbotConfiguration.findOne({ storeId, enabled: true });

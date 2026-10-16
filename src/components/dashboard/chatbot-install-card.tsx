@@ -59,12 +59,14 @@ export function ChatbotInstallCard({ storeId }: { storeId: string }) {
         <p className="text-sm text-muted">
           &ldquo;Active&rdquo; means the loader script pinged us within the last 48 hours — either from
           the preview above or from the real snippet once it&apos;s installed on your storefront.
+          The chatbot must also be published from Settings before shoppers can open it.
         </p>
         <p className="text-sm text-muted">
           Paste this snippet once, just before <code className="text-xs">&lt;/body&gt;</code> in your
           theme&apos;s <code className="text-xs">theme.liquid</code> file (Online Store → Themes → Edit code).
-          It only loads a small script that renders the widget using your settings above — no
-          credentials are ever exposed to the storefront.
+          The chat button appears on storefront pages where this script is installed after you
+          publish it from Settings. Unpublish it there or remove the snippet to hide it. No Shopify
+          credentials are exposed to the storefront.
         </p>
         <div className="relative">
           <pre className="overflow-x-auto rounded-md border border-border bg-background p-3 text-xs text-foreground">
@@ -87,11 +89,6 @@ export function ChatbotInstallCard({ storeId }: { storeId: string }) {
             )}
           </button>
         </div>
-        <p className="text-sm text-muted">
-          This manual snippet is the MVP&apos;s installation method. A Shopify theme app extension
-          (toggle-on embed block, no code editing) is the planned production path and isn&apos;t built
-          yet.
-        </p>
       </CardContent>
     </Card>
   );

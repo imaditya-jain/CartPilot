@@ -4,9 +4,12 @@ import { requireAuthContext } from "@/lib/auth/get-auth-context";
 import { shopDomainSchema } from "@/lib/validation/shopify";
 import { fetchShopInfo } from "@/services/shopify-oauth-service";
 import { finalizeStoreConnection } from "@/services/shopify-connection-service";
+import { runStoreSync } from "@/services/shopify-sync-service";
 import { ok, fail, handleApiError, ApiError } from "@/lib/utils/api-response";
 import { rateLimit, getClientIp } from "@/lib/utils/rate-limit";
 import { getServerEnv } from "@/lib/env";
+
+export const maxDuration = 300;
 
 const bodySchema = z.object({
   shop: shopDomainSchema,
@@ -60,6 +63,7 @@ export async function POST(request: NextRequest) {
       scopes: env.SHOPIFY_SCOPES.split(",").map((s) => s.trim()),
       tokenType: "custom",
     });
+    await runStoreSync(store._id.toString(), auth.userId);
 
     return ok({ storeId: store._id.toString(), shopName: shopInfo.name });
   } catch (error) {

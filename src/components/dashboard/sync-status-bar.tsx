@@ -36,7 +36,7 @@ export function SyncStatusBar({
       <div className="flex items-center gap-2.5 text-sm">
         <Badge tone={SYNC_TONE[store.syncStatus]}>
           {isSyncing && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
-          {store.syncStatus === "syncing" ? "Syncing…" : store.syncStatus === "error" ? "Sync failed" : "Synced"}
+          {isSyncing ? "Syncing…" : store.syncStatus === "error" ? "Sync failed" : "Synced"}
         </Badge>
         <span className="text-muted">
           {store.lastSyncedAt

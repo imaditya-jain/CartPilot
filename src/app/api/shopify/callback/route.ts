@@ -5,8 +5,10 @@ import { verifyOAuthHmac } from "@/lib/shopify/hmac";
 import { verifyAndConsumeOAuthState } from "@/lib/shopify/oauth-state";
 import { exchangeCodeForAccessToken } from "@/services/shopify-oauth-service";
 import { finalizeStoreConnection } from "@/services/shopify-connection-service";
+import { runStoreSync } from "@/services/shopify-sync-service";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 /**
  * Redirects relative to the incoming request's own origin rather than a configured app URL, so
@@ -57,7 +59,7 @@ export async function GET(request: NextRequest) {
   try {
     const offlineToken = await exchangeCodeForAccessToken(shop, code);
 
-    await finalizeStoreConnection({
+    const store = await finalizeStoreConnection({
       tenantId: auth.userId,
       shopDomain: shop,
       accessToken: offlineToken.accessToken,
@@ -70,6 +72,7 @@ export async function GET(request: NextRequest) {
       offlineToken,
       tokenType: "oauth_offline",
     });
+    await runStoreSync(store._id.toString(), auth.userId);
 
     return redirectToStores(request, "connected");
   } catch (error) {

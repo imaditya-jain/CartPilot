@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     const config = await getPublicChatbotConfig(storeId);
     if (!config) {
-      return fail(404, "CHATBOT_NOT_PUBLISHED", "This store has no published chatbot configuration.");
+      return fail(404, "CHATBOT_NOT_PUBLISHED", "Publish this store's chatbot before loading it on the storefront.");
     }
 
     return ok(config);
