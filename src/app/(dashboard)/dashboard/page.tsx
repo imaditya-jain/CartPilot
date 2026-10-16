@@ -189,7 +189,11 @@ export default function DashboardPage() {
                   <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted" aria-hidden="true" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground">AI insight</p>
-                    <p className="text-sm text-muted">{insightStatus.insight.alerts?.length ? insightStatus.insight.alerts[0].title + " — " + insightStatus.insight.alerts[0].detail : insightStatus.insight.summary}</p>
+                    <p className="text-sm text-muted">
+                      {insightStatus.insight.alerts?.[0]
+                        ? `${insightStatus.insight.alerts[0]?.title} — ${insightStatus.insight.alerts[0]?.detail}`
+                        : insightStatus.insight.summary}
+                    </p>
                   </div>
                   <ArrowRight className="ml-auto h-4 w-4 flex-shrink-0 text-muted" aria-hidden="true" />
                 </CardContent>

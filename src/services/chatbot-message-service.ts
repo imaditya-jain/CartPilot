@@ -214,7 +214,7 @@ export async function searchStoreProductsWithIntent(
         audit: { ...auditContext, operation: "chat_retrieval" },
       }
     );
-    const parsed = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? "{}");
+    const parsed = JSON.parse(rawTerms.match(/\{[\s\S]*\}/)?.[0] ?? "{}");
     const searchTerms = Array.isArray(parsed.searchTerms)
       ? parsed.searchTerms.filter((term: unknown): term is string => typeof term === "string" && term.trim().length > 1).slice(0, 8)
       : [];

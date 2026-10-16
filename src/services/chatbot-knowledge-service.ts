@@ -160,7 +160,11 @@ export async function rebuildStoreKnowledgeIndex(storeId: string): Promise<void>
   }
 
   if (generated.length > 0) await ChatbotKnowledgeChunk.bulkWrite(generated.map((chunk) => ({
-    replaceOne: { filter: { storeId: storeObjectId, kind: chunk.kind, batchIndex: chunk.batchIndex }, replacement: chunk, upsert: true },
+    updateOne: {
+      filter: { storeId: storeObjectId, kind: chunk.kind, batchIndex: chunk.batchIndex },
+      update: { $set: chunk },
+      upsert: true,
+    },
   })), { ordered: true });
   if (generated.length === 0) {
     await ChatbotKnowledgeChunk.deleteMany({ storeId: storeObjectId });

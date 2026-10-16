@@ -123,11 +123,13 @@ export default function AnalyticsPage() {
     );
   }
 
-  if (error) {
+  if (error || !overview) {
     return (
       <div>
         <PageHeader title="Analytics" description="See what sells, what needs stock, and where orders need attention." />
-        <div className="rounded-md border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>
+        <div className="rounded-md border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
+          {error ?? "Analytics data is unavailable."}
+        </div>
       </div>
     );
   }

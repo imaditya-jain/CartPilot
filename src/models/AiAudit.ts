@@ -8,7 +8,7 @@ export interface AiAuditMessage {
   content: string;
 }
 
-export interface AiAuditDocument extends Document {
+export interface AiAuditDocument extends Omit<Document, "model"> {
   tenantId: Types.ObjectId;
   storeId: Types.ObjectId;
   operation: AiAuditOperation;
